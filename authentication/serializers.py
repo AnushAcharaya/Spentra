@@ -7,6 +7,9 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.conf import settings
+import random
+from django.core.cache import cache
+from django.utils.timezone import now, timedelta
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -57,6 +60,8 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 
+
+
 class PasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -70,15 +75,64 @@ class PasswordResetSerializer(serializers.Serializer):
     def save(self):
         email = self.validated_data['email']
         user = User.objects.get(email=email)
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
 
-        # Send the reset link via email
+        # Generate a 6-digit OTP
+        otp = random.randint(100000, 999999)
+
+        # Store the OTP in the cache with a 10-minute expiration
+        cache_key = f"password_reset_otp_{user.pk}"
+        cache.set(cache_key, otp, timeout=600)  # 600 seconds = 10 minutes
+
+        # Send the OTP via email
         send_mail(
-            subject="Password Reset Request",
-            message=f"Click the link below to reset your password:\n{reset_link}",
+            subject="Your Password Reset OTP",
+            message=f"Your OTP for password reset is: {otp}. It is valid for 10 minutes.",
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
             fail_silently=False,
         )
+
+
+
+
+
+class OTPVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.IntegerField()
+    new_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        otp = attrs.get('otp')
+        new_password = attrs.get('new_password')
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User with this email does not exist.")
+
+        # Retrieve the OTP from the cache
+        cache_key = f"password_reset_otp_{user.pk}"
+        cached_otp = cache.get(cache_key)
+
+        if cached_otp is None:
+            raise serializers.ValidationError("OTP has expired or is invalid.")
+        if cached_otp != otp:
+            raise serializers.ValidationError("Invalid OTP.")
+
+        # Validate the new password (optional, based on your requirements)
+        validate_password(new_password, user)
+
+        return attrs
+
+    def save(self):
+        email = self.validated_data['email']
+        new_password = self.validated_data['new_password']
+
+        user = User.objects.get(email=email)
+        user.set_password(new_password)
+        user.save()
+
+        # Clear the OTP from the cache
+        cache_key = f"password_reset_otp_{user.pk}"
+        cache.delete(cache_key)
