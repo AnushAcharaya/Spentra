@@ -2,14 +2,11 @@ import re
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.conf import settings
 import random
 from django.core.cache import cache
-from django.utils.timezone import now, timedelta
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -28,7 +25,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Ensure the email contains "@" and at least one digit
         if not re.search(r'@', value):
             raise serializers.ValidationError("Email must contain '@'.")
-        
+        return value
 
     def validate_password(self, value):
         # Ensure the password contains uppercase, lowercase, digit, and special character
@@ -38,7 +35,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Password must contain at least one lowercase letter.")
         if not re.search(r'\d', value):
             raise serializers.ValidationError("Password must contain at least one digit.")
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
+        if not re.search(r'[!@#$%^&*(),.?\":{}|<>]', value):
             raise serializers.ValidationError("Password must contain at least one special character.")
         return value
 
@@ -53,11 +50,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
-
-
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -82,16 +78,16 @@ class PasswordResetSerializer(serializers.Serializer):
         cache.set(cache_key, otp, timeout=600)  # 600 seconds = 10 minutes
 
         # Send the OTP via email
-        send_mail(
-            subject="Your Password Reset OTP",
-            message=f"Your OTP for password reset is: {otp}. It is valid for 10 minutes.",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-
-
-
+        try:
+            send_mail(
+                subject="Your Password Reset OTP",
+                message=f"Your OTP for password reset is: {otp}. It is valid for 10 minutes.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error sending email: {e}")
 
 
 class OTPVerifySerializer(serializers.Serializer):
@@ -118,7 +114,7 @@ class OTPVerifySerializer(serializers.Serializer):
         if cached_otp != otp:
             raise serializers.ValidationError("Invalid OTP.")
 
-        # Validate the new password (optional, based on your requirements)
+        # Validate the new password
         validate_password(new_password, user)
 
         return attrs

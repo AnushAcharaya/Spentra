@@ -38,10 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'authentication',
-    'CRUD',
     'rest_framework',
-    
-    
 ]
 
 MIDDLEWARE = [
@@ -131,11 +128,20 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your_email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your_email_password'
-DEFAULT_FROM_EMAIL = 'your_email@gmail.com'
+EMAIL_HOST_USER = 'anushacharya875@gmail.com'
+EMAIL_HOST_PASSWORD = 'jxcp vugs kaxo yyqh'
+DEFAULT_FROM_EMAIL = 'noreply@gmail.com'
 
 FRONTEND_URL = "http://localhost:3000"
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

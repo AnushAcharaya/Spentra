@@ -13,14 +13,24 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             # Send confirmation email
-            send_mail(
-                'Welcome to Our Platform',
-                'Thank you for registering!',
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
+            try:
+                send_mail(
+                    subject='Welcome to Our Platform',
+                    message='Thank you for registering!',
+                    from_email = settings.DEFAULT_FROM_EMAIL,
+                    recipient_list = [user.email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                print(f"Error sending email: {e}")
+                return Response(
+                    {"message": "User registered successfully, but email could not be sent."},
+                    status=status.HTTP_201_CREATED,
+                )
+            return Response(
+                {"message": "User registered successfully. Confirmation email sent."},
+                status=status.HTTP_201_CREATED,
             )
-            return Response({"message": "User registered successfully. Confirmation email sent."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -42,12 +52,26 @@ class LoginView(APIView):
 
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import PasswordResetSerializer
+
+
 class PasswordResetView(APIView):
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+            try:
+                serializer.save()  # This will generate and send the OTP
+                return Response(
+                    {"message": "OTP has been sent to your email."},
+                    status=status.HTTP_200_OK,
+                )
+            except Exception as e:
+                print(f"Error sending OTP email: {e}")
+                return Response(
+                    {"error": "An error occurred while sending the OTP. Please try again later."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# Create your views here.
