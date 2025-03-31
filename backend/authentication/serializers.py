@@ -58,47 +58,43 @@ class LoginSerializer(serializers.Serializer):
 
 class PasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField()
-
-    def validate_email(self, value):
-        try:
-            user = User.objects.get(email=value)
-        except User.DoesNotExist:
-            raise serializers.ValidationError("User with this email does not exist.")
-        return value
-
-    def save(self):
-        email = self.validated_data['email']
-        user = User.objects.get(email=email)
-
-        # Generate a 6-digit OTP
-        otp = random.randint(100000, 999999)
-
-        # Store the OTP in the cache with a 10-minute expiration
-        cache_key = f"password_reset_otp_{user.pk}"
-        cache.set(cache_key, otp, timeout=600)  # 600 seconds = 10 minutes
-
-        # Send the OTP via email
-        try:
-            send_mail(
-                subject="Your Password Reset OTP",
-                message=f"Your OTP for password reset is: {otp}. It is valid for 10 minutes.",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-        except Exception as e:
-            print(f"Error sending email: {e}")
-
-
-class OTPVerifySerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    otp = serializers.IntegerField()
+    old_password = serializers.CharField(write_only=True)
     new_password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         email = attrs.get('email')
-        otp = attrs.get('otp')
+        old_password = attrs.get('old_password')
         new_password = attrs.get('new_password')
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User with this email does not exist.")
+
+        # Validate the old password
+        if not user.check_password(old_password):
+            raise serializers.ValidationError("Old password is incorrect.")
+
+        # Validate the new password
+        validate_password(new_password, user)
+
+        return attrs
+
+    def save(self):
+        email = self.validated_data['email']
+        new_password = self.validated_data['new_password']
+
+        user = User.objects.get(email=email)
+        user.set_password(new_password)
+        user.save()
+
+class OTPVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.IntegerField()
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        otp = attrs.get('otp')
 
         try:
             user = User.objects.get(email=email)
@@ -114,19 +110,14 @@ class OTPVerifySerializer(serializers.Serializer):
         if cached_otp != otp:
             raise serializers.ValidationError("Invalid OTP.")
 
-        # Validate the new password
-        validate_password(new_password, user)
-
         return attrs
 
     def save(self):
         email = self.validated_data['email']
-        new_password = self.validated_data['new_password']
-
         user = User.objects.get(email=email)
-        user.set_password(new_password)
-        user.save()
 
-        # Clear the OTP from the cache
+        # Clear the OTP from the cache after successful verification
         cache_key = f"password_reset_otp_{user.pk}"
         cache.delete(cache_key)
+
+        return user

@@ -62,16 +62,15 @@ class PasswordResetView(APIView):
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
         if serializer.is_valid():
-            try:
-                serializer.save()  # This will generate and send the OTP
-                return Response(
-                    {"message": "OTP has been sent to your email."},
-                    status=status.HTTP_200_OK,
-                )
-            except Exception as e:
-                print(f"Error sending OTP email: {e}")
-                return Response(
-                    {"error": "An error occurred while sending the OTP. Please try again later."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            serializer.save()  # Password is reset
+            return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OTPVerifyView(APIView):
+    def post(self, request):
+        serializer = OTPVerifySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()  # OTP is verified and cleared from the cache
+            return Response({"message": "OTP verified successfully. You can now reset your password."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
