@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('authentication.urls')),
     path('userprofile/', include('userProfile.urls')),  # Include the authentication app's URLs
+    path('crud/', include('CRUD.urls')),
 ]
 
 # Serve media files during development
