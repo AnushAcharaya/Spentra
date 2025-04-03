@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Transaction, Category
+from .models import Transaction, Category, Budget
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,3 +12,8 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = ['id', 'type', 'amount', 'description', 'category', 'category_name', 'date_created']
+
+class BudgetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Budget
+        fields = ['id', 'monthly_budget', 'created_at', 'updated_at']

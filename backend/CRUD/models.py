@@ -23,3 +23,12 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.type.capitalize()} - {self.amount}"
+
+class Budget(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="budget")
+    monthly_budget = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Budget for {self.user.username}: {self.monthly_budget}"
