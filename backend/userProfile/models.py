@@ -7,6 +7,13 @@ class UserProfile(models.Model):
     full_name = models.CharField(max_length=255)
     email = models.EmailField(max_length=255, blank=True, null=True)
     photo = models.ImageField(upload_to="profile_photos/", blank=True, null=True)
+    first_name = models.CharField(max_length=50, blank=True, null=True)  # New field
+    last_name = models.CharField(max_length=50, blank=True, null=True)   # New field
+    gender = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], blank=True, null=True)  # New field
+    country = models.CharField(max_length=100, blank=True, null=True)    # New field
+    language = models.CharField(max_length=50, blank=True, null=True)    # New field
+    location = models.CharField(max_length=255, blank=True, null=True)   # New field
+    bio = models.TextField(blank=True, null=True)                        # New field
 
     def clean(self):
         # Restrict file size (e.g., 2 MB)
