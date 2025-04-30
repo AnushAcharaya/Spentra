@@ -79,45 +79,52 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
-class PasswordResetSerializer(serializers.Serializer):
+class RequestPasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    old_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(write_only=True)
 
-    def validate(self, attrs):
-        email = attrs.get('email')
-        old_password = attrs.get('old_password')
-        new_password = attrs.get('new_password')
-
+    def validate_email(self, value):
         try:
-            user = User.objects.get(email=email)
+            User.objects.get(email=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("User with this email does not exist.")
-
-        # Validate the old password
-        if not user.check_password(old_password):
-            raise serializers.ValidationError("Old password is incorrect.")
-
-        # Validate the new password
-        validate_password(new_password, user)
-
-        return attrs
+        return value
 
     def save(self):
         email = self.validated_data['email']
-        new_password = self.validated_data['new_password']
-
         user = User.objects.get(email=email)
-        user.set_password(new_password)
-        user.save()
+        
+        # Generate OTP (6-digit number)
+        otp = random.randint(100000, 999999)
+        
+        # Store OTP in cache with 10-minute expiration
+        cache_key = f"password_reset_otp_{user.pk}"
+        cache.set(cache_key, otp, timeout=600)  # 600 seconds = 10 minutes
+        
+        # Send OTP via email
+        try:
+            send_mail(
+                subject='Password Reset OTP',
+                message=f'Your OTP for password reset is: {otp}. This OTP is valid for 10 minutes.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return {'email': email, 'user': user}
+        except Exception as e:
+            print(f"Error sending email: {e}")
+            return None
+
 
 class OTPVerifySerializer(serializers.Serializer):
-    email = serializers.EmailField()
     otp = serializers.IntegerField()
 
     def validate(self, attrs):
-        email = attrs.get('email')
         otp = attrs.get('otp')
+        
+        # Get email from context (will be passed from the view)
+        email = self.context.get('email')
+        if not email:
+            raise serializers.ValidationError("Email context is required")
 
         try:
             user = User.objects.get(email=email)
@@ -132,6 +139,9 @@ class OTPVerifySerializer(serializers.Serializer):
             raise serializers.ValidationError("OTP has expired or is invalid.")
         if cached_otp != otp:
             raise serializers.ValidationError("Invalid OTP.")
+            
+        # Store email for use in save method
+        attrs['email'] = email
 
         return attrs
 
@@ -142,9 +152,75 @@ class OTPVerifySerializer(serializers.Serializer):
         # Clear the OTP from the cache after successful verification
         cache_key = f"password_reset_otp_{user.pk}"
         cache.delete(cache_key)
+        
+        # Set a verification flag that will be checked during password reset
+        verification_key = f"password_reset_verified_{user.pk}"
+        cache.set(verification_key, True, timeout=600)  # 10 minutes to complete password reset
 
         return user
-    
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        new_password = attrs.get('new_password')
+        confirm_password = attrs.get('confirm_password')
+        
+        # Get email from context (will be passed from the view)
+        email = self.context.get('email')
+        if not email:
+            raise serializers.ValidationError("Email is required")
+            
+        # Check if user exists
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User with this email does not exist.")
+
+        # Check if OTP was verified
+        cache_key = f"password_reset_verified_{user.pk}"
+        verified = cache.get(cache_key)
+        if not verified:
+            raise serializers.ValidationError("Please verify your OTP first.")
+
+        # Validate password complexity
+        if not re.search(r'[A-Z]', new_password):
+            raise serializers.ValidationError({"new_password": "Password must contain at least one uppercase letter."})
+        if not re.search(r'[a-z]', new_password):
+            raise serializers.ValidationError({"new_password": "Password must contain at least one lowercase letter."})
+        if not re.search(r'\d', new_password):
+            raise serializers.ValidationError({"new_password": "Password must contain at least one digit."})
+        if not re.search(r'[!@#$%^&*(),.?\":{}|<>]', new_password):
+            raise serializers.ValidationError({"new_password": "Password must contain at least one special character."})
+
+        # Check if passwords match
+        if new_password != confirm_password:
+            raise serializers.ValidationError({"confirm_password": "Password fields didn't match."})
+
+        # Validate the new password
+        validate_password(new_password, user)
+        
+        # Store email for use in save method
+        attrs['email'] = email
+        
+        return attrs
+
+    def save(self):
+        email = self.validated_data['email']
+        new_password = self.validated_data['new_password']
+
+        user = User.objects.get(email=email)
+        user.set_password(new_password)
+        user.save()
+
+        # Clear verification flag from cache
+        cache_key = f"password_reset_verified_{user.pk}"
+        cache.delete(cache_key)
+        
+        return user
+
 
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:

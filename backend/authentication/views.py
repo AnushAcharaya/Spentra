@@ -1,10 +1,9 @@
-
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import RegisterSerializer, LoginSerializer,PasswordResetSerializer
-from .serializers import OTPVerifySerializer
+from .serializers import RegisterSerializer, LoginSerializer, PasswordResetSerializer
+from .serializers import OTPVerifySerializer, RequestPasswordResetSerializer
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -67,31 +66,59 @@ class LoginView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .serializers import PasswordResetSerializer
-
-
-class PasswordResetView(APIView):
+class RequestPasswordResetView(APIView):
     def post(self, request):
-        serializer = PasswordResetSerializer(data=request.data)
+        serializer = RequestPasswordResetSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()  # Password is reset
-            return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+            result = serializer.save()  # Send OTP via email
+            if result:
+                # Store email in session for future use
+                request.session['reset_email'] = result['email']
+                
+                return Response({
+                    "message": "OTP has been sent to your email."
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Failed to send OTP email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OTPVerifyView(APIView):
     def post(self, request):
-        serializer = OTPVerifySerializer(data=request.data)
+        # Get email from query parameters or session
+        email = request.query_params.get('email') or request.session.get('reset_email')
+        
+        if not email:
+            return Response({"error": "Email parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Pass email in context
+        serializer = OTPVerifySerializer(data=request.data, context={'email': email})
         if serializer.is_valid():
-            serializer.save()  # OTP is verified and cleared from the cache
-            return Response({"message": "OTP verified successfully. You can now reset your password."}, status=status.HTTP_200_OK)
+            user = serializer.save()  # OTP is verified and verification flag is set
+            
+            # Store email in session for use in password reset
+            request.session['reset_email'] = user.email
+            
+            return Response({
+                "message": "OTP verified successfully. You can now reset your password."
+            }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
+
+class PasswordResetView(APIView):
+    def post(self, request):
+        # Extract email from query parameters or session
+        email = request.query_params.get('email') or request.session.get('reset_email')
+        
+        if not email:
+            return Response({"error": "Email parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Pass email in context
+        serializer = PasswordResetSerializer(data=request.data, context={'email': email})
+        if serializer.is_valid():
+            serializer.save()  # Password is reset
+            return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProtectedView(APIView):
