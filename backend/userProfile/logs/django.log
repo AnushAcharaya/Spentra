@@ -1,0 +1,30 @@
+INFO 2025-05-01 15:32:53,631 autoreload Watching for file changes with StatReloader
+INFO 2025-05-01 15:51:25,146 autoreload Watching for file changes with StatReloader
+WARNING 2025-05-01 15:51:28,171 log Not Found: /
+WARNING 2025-05-01 15:51:28,172 basehttp "GET / HTTP/1.1" 404 2630
+INFO 2025-05-01 15:51:41,806 basehttp "GET /userprofile/profile/ HTTP/1.1" 200 5594
+INFO 2025-05-01 15:51:57,995 basehttp "GET /userprofile/profile/ HTTP/1.1" 200 5594
+INFO 2025-05-01 15:52:02,941 basehttp "GET /userprofile/profile/?format=json HTTP/1.1" 200 286
+INFO 2025-05-01 15:52:13,335 basehttp "GET /userprofile/profile/?format=api HTTP/1.1" 200 5627
+INFO 2025-05-01 15:52:56,603 basehttp "GET /userprofile/profile/?format=json HTTP/1.1" 200 286
+INFO 2025-05-01 16:24:29,295 autoreload Watching for file changes with StatReloader
+WARNING 2025-05-01 16:24:54,968 log Not Found: /
+WARNING 2025-05-01 16:24:54,969 basehttp "GET / HTTP/1.1" 404 2630
+INFO 2025-05-01 16:26:23,511 signals Created new profile for user testuser
+INFO 2025-05-01 16:26:23,514 signals Updated profile for user testuser
+INFO 2025-05-01 16:27:41,421 autoreload Watching for file changes with StatReloader
+WARNING 2025-05-01 16:27:46,256 log Not Found: /
+WARNING 2025-05-01 16:27:46,257 basehttp "GET / HTTP/1.1" 404 2630
+INFO 2025-05-01 16:27:54,666 basehttp "GET /admin/ HTTP/1.1" 302 0
+INFO 2025-05-01 16:27:54,707 basehttp "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4160
+INFO 2025-05-01 16:27:54,729 basehttp "GET /static/admin/css/base.css HTTP/1.1" 304 0
+INFO 2025-05-01 16:27:54,729 basehttp "GET /static/admin/css/dark_mode.css HTTP/1.1" 304 0
+INFO 2025-05-01 16:27:54,730 basehttp "GET /static/admin/js/theme.js HTTP/1.1" 304 0
+INFO 2025-05-01 16:27:54,732 basehttp "GET /static/admin/css/login.css HTTP/1.1" 304 0
+INFO 2025-05-01 16:27:54,733 basehttp "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 304 0
+INFO 2025-05-01 16:27:54,734 basehttp "GET /static/admin/css/responsive.css HTTP/1.1" 304 0
+INFO 2025-05-01 16:27:54,735 basehttp "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 304 0
+INFO 2025-05-01 16:28:35,590 basehttp "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4324
+INFO 2025-05-01 16:28:49,409 basehttp "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4321
+INFO 2025-05-01 16:28:51,308 basehttp "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4321
+INFO 2025-05-01 16:29:13,446 basehttp "POST /admin/login/?next=/admin/ HTTP/1.1" 200 4324

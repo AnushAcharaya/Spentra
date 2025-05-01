@@ -1,14 +1,41 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import UserProfile
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    photo_url = serializers.SerializerMethodField(read_only=True)
+    
     class Meta:
         model = UserProfile
         fields = [
-            'full_name', 'photo', 'first_name', 'last_name', 'gender', 
-            'country', 'language', 'location', 'bio'
-        ]  # Include new fields
+            'id', 'full_name', 'photo', 'photo_url', 'first_name', 'last_name', 
+            'gender', 'country', 'language', 'location', 'bio', 'date_updated', 'date_created'
+        ]
+        read_only_fields = ['id', 'date_updated', 'date_updated']
+        
+    def get_photo_url(self, obj):
+        if obj.photo:
+            try:
+                return obj.photo.url
+            except Exception as e:
+                logger.error(f"Error getting photo URL: {str(e)}")
+                return None
+        return None
+    
+    def validate_photo(self, value):
+        if value:
+            # Check file size (2MB limit)
+            if value.size > 2 * 1024 * 1024:
+                raise serializers.ValidationError("Image file too large (max 2MB)")
+                
+            # Check file type
+            if not value.content_type.startswith('image/'):
+                raise serializers.ValidationError("Uploaded file is not an image")
+                
+        return value
 
 class UserSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer()
@@ -16,41 +43,28 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'profile']
+        read_only_fields = ['id', 'username']
 
     def update(self, instance, validated_data):
         profile_data = validated_data.pop('profile', {})
-        full_name = profile_data.get('full_name')
-        photo = profile_data.get('photo')
-        first_name = profile_data.get('first_name')
-        last_name = profile_data.get('last_name')
-        gender = profile_data.get('gender')
-        country = profile_data.get('country')
-        language = profile_data.get('language')
-        location = profile_data.get('location')
-        bio = profile_data.get('bio')
-
+        
+        # Update user fields
         instance.email = validated_data.get('email', instance.email)
         instance.save()
 
-        profile = instance.profile
-        if full_name:
-            profile.full_name = full_name
-        if photo:
-            profile.photo = photo
-        if first_name:
-            profile.first_name = first_name
-        if last_name:
-            profile.last_name = last_name
-        if gender:
-            profile.gender = gender
-        if country:
-            profile.country = country
-        if language:
-            profile.language = language
-        if location:
-            profile.location = location
-        if bio:
-            profile.bio = bio
-        profile.save()
+        # Ensure profile exists
+        profile, created = UserProfile.objects.get_or_create(user=instance)
+        
+        # Update profile fields with proper error handling
+        try:
+            # Update each field individually with proper validation
+            for attr, value in profile_data.items():
+                if value is not None:  # Only update if value is provided
+                    setattr(profile, attr, value)
+            
+            profile.save()
+        except Exception as e:
+            logger.error(f"Error updating profile: {str(e)}")
+            raise serializers.ValidationError(f"Error updating profile: {str(e)}")
 
         return instance
