@@ -14,7 +14,11 @@ from .views import (
     RetrieveBudgetView,
     UpdateBudgetView,
     BudgetAnalysisView,
-    
+    WeeklyFinancialOverviewView,
+    NotificationCenterView,
+    MarkNotificationReadView,
+    MarkAllNotificationsReadView,
+    UnreadNotificationsCountView,
 )
 
 urlpatterns = [
@@ -28,8 +32,15 @@ urlpatterns = [
     path('dashboard/history/', TransactionHistoryView.as_view(), name='transaction-history'),
     path('dashboard/filter/', FilterTransactionsView.as_view(), name='filter-transactions'),
     path('dashboard/summary/', FinancialSummaryView.as_view(), name='financial-summary'),
+    path('dashboard/weekly-overview/', WeeklyFinancialOverviewView.as_view(), name='weekly-financial-overview'),
     path('budget/', SetBudgetView.as_view(), name='set-budget'),
     path('budget/retrieve/', RetrieveBudgetView.as_view(), name='retrieve-budget'),
     path('budget/update/', UpdateBudgetView.as_view(), name='update-budget'),
     path('budget/analysis/', BudgetAnalysisView.as_view(), name='budget-analysis'),
+    
+    # Notification routes
+    path('notifications/', NotificationCenterView.as_view(), name='notification-center'),
+    path('notifications/<int:id>/read/', MarkNotificationReadView.as_view(), name='mark-notification-read'),
+    path('notifications/read-all/', MarkAllNotificationsReadView.as_view(), name='mark-all-notifications-read'),
+    path('notifications/unread-count/', UnreadNotificationsCountView.as_view(), name='unread-notifications-count'),
 ]

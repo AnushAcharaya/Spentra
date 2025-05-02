@@ -32,3 +32,22 @@ class Budget(models.Model):
 
     def __str__(self):
         return f"Budget for {self.user.username}: {self.monthly_budget}"
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('budget_exceeded', 'Budget Exceeded'),
+        ('low_balance', 'Low Balance'),
+        ('large_expense', 'Large Expense'),
+        ('weekly_summary', 'Weekly Summary'),
+        ('system', 'System Notification'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=100)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"
