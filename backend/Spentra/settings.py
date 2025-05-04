@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'userProfile',
     "CRUD",
     'rest_framework',
+    'channels', 
 ]
 
 MIDDLEWARE = [
@@ -147,3 +148,14 @@ CACHES = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+ASGI_APPLICATION = 'Spentra.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
