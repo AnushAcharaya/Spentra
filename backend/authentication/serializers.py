@@ -1,13 +1,28 @@
 import re
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.mail import send_mail
 from django.conf import settings
 import random
 from django.core.cache import cache
+from .models import CustomUser
 
 
+"""_summary_
+    
+        This module defines serializers for user authentication and profile management in the Spentra application.
+        It includes serializers for user registration, login, password reset, and OTP verification.
+        The serializers handle validation and serialization of user data, including password complexity requirements.
+        The OTP verification process is also included to enhance security during password resets.
+        The RegisterSerializer ensures that the password meets specific criteria, including the presence of uppercase letters,
+        lowercase letters, digits, and special characters. It also checks for matching passwords during registration.
+        The LoginSerializer handles user login, while the PasswordResetSerializer manages password reset requests and validation.
+        The OTPVerifySerializer is used to verify the OTP sent to the user's email during the password reset process.
+        
+
+"""
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
@@ -54,6 +69,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        if not email or not password:
+            raise serializers.ValidationError("Both email and password are required.")
+        return data
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -121,3 +144,9 @@ class OTPVerifySerializer(serializers.Serializer):
         cache.delete(cache_key)
 
         return user
+    
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = '__all__'
