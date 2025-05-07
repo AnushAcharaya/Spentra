@@ -159,3 +159,12 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+
+KHALTI_SECRET_KEY = "test_secret_key_00000000000000000000000000000000"  # Replace with your actual Khalti secret key
