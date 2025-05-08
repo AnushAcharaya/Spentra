@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'userProfile',
     "CRUD",
     'rest_framework',
-    'channels', 
+    'channels',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -167,4 +168,3 @@ REST_FRAMEWORK = {
 }
 
 
-KHALTI_SECRET_KEY = "test_secret_key_00000000000000000000000000000000"  # Replace with your actual Khalti secret key

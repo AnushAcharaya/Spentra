@@ -12,10 +12,24 @@ from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import json
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class AddTransactionView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Add a new transaction",
+        request_body=TransactionSerializer,
+        responses={
+            201: openapi.Response(
+                description="Transaction created successfully",
+                schema=TransactionSerializer
+            ),
+            400: "Bad Request",
+            401: "Unauthorized"
+        }
+    )
     def post(self, request):
         serializer = TransactionSerializer(data=request.data)
         if serializer.is_valid():
@@ -31,6 +45,16 @@ class AddTransactionView(APIView):
 class RetrieveTransactionsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Retrieve all transactions for the authenticated user",
+        responses={
+            200: openapi.Response(
+                description="List of transactions",
+                schema=TransactionSerializer(many=True)
+            ),
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         transactions = Transaction.objects.filter(user=request.user).order_by('-date_created')
         serializer = TransactionSerializer(transactions, many=True)
@@ -40,6 +64,17 @@ class RetrieveTransactionsView(APIView):
 class RetrieveTransactionView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Retrieve a specific transaction by ID",
+        responses={
+            200: openapi.Response(
+                description="Transaction details",
+                schema=TransactionSerializer
+            ),
+            404: "Transaction not found",
+            401: "Unauthorized"
+        }
+    )
     def get(self, request, id):
         try:
             transaction = Transaction.objects.get(id=id, user=request.user)
@@ -52,6 +87,19 @@ class RetrieveTransactionView(APIView):
 class UpdateTransactionView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Update a specific transaction by ID",
+        request_body=TransactionSerializer,
+        responses={
+            200: openapi.Response(
+                description="Transaction updated successfully",
+                schema=TransactionSerializer
+            ),
+            400: "Bad Request",
+            404: "Transaction not found",
+            401: "Unauthorized"
+        }
+    )
     def put(self, request, id):
         try:
             transaction = Transaction.objects.get(id=id, user=request.user)
@@ -66,6 +114,14 @@ class UpdateTransactionView(APIView):
 class DeleteTransactionView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Delete a specific transaction by ID",
+        responses={
+            204: "No Content",
+            404: "Transaction not found",
+            401: "Unauthorized"
+        }
+    )
     def delete(self, request, id):
         try:
             transaction = Transaction.objects.get(id=id, user=request.user)
@@ -78,6 +134,18 @@ class DeleteTransactionView(APIView):
 class AddCategoryView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Add a new category",
+        request_body=CategorySerializer,
+        responses={
+            201: openapi.Response(
+                description="Category created successfully",
+                schema=CategorySerializer
+            ),
+            400: "Bad Request",
+            401: "Unauthorized"
+        }
+    )
     def post(self, request):
         serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
@@ -89,6 +157,16 @@ class AddCategoryView(APIView):
 class RetrieveCategoriesView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Retrieve all categories",
+        responses={
+            200: openapi.Response(
+                description="List of categories",
+                schema=CategorySerializer(many=True)
+            ),
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         categories = Category.objects.all()
         serializer = CategorySerializer(categories, many=True)
@@ -98,6 +176,16 @@ class RetrieveCategoriesView(APIView):
 class TransactionHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Get transaction history for the authenticated user",
+        responses={
+            200: openapi.Response(
+                description="Transaction history",
+                schema=TransactionSerializer(many=True)
+            ),
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         transactions = Transaction.objects.filter(user=request.user).order_by('-date_created')
         serializer = TransactionSerializer(transactions, many=True)
@@ -106,6 +194,22 @@ class TransactionHistoryView(APIView):
 class FilterTransactionsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Filter transactions based on date range, category, and type",
+        manual_parameters=[
+            openapi.Parameter('start_date', openapi.IN_QUERY, description="Start date (YYYY-MM-DD)", type=openapi.TYPE_STRING),
+            openapi.Parameter('end_date', openapi.IN_QUERY, description="End date (YYYY-MM-DD)", type=openapi.TYPE_STRING),
+            openapi.Parameter('category', openapi.IN_QUERY, description="Category ID", type=openapi.TYPE_INTEGER),
+            openapi.Parameter('type', openapi.IN_QUERY, description="Transaction type (income/expense)", type=openapi.TYPE_STRING),
+        ],
+        responses={
+            200: openapi.Response(
+                description="Filtered transactions",
+                schema=TransactionSerializer(many=True)
+            ),
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
@@ -127,6 +231,25 @@ class FilterTransactionsView(APIView):
 class FinancialSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Get financial summary including total income, expenses, and category-wise summary",
+        responses={
+            200: openapi.Response(
+                description="Financial summary",
+                examples={
+                    "application/json": {
+                        "total_income": 5000.00,
+                        "total_expenses": 3000.00,
+                        "category_summary": [
+                            {"category__name": "Food", "total": 1000.00},
+                            {"category__name": "Transport", "total": 500.00}
+                        ]
+                    }
+                }
+            ),
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         total_income = Transaction.objects.filter(user=request.user, type='income').aggregate(Sum('amount'))['amount__sum'] or 0
         total_expenses = Transaction.objects.filter(user=request.user, type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
@@ -141,6 +264,18 @@ class FinancialSummaryView(APIView):
 class SetBudgetView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Set or update monthly budget",
+        request_body=BudgetSerializer,
+        responses={
+            201: openapi.Response(
+                description="Budget set successfully",
+                schema=BudgetSerializer
+            ),
+            400: "Bad Request",
+            401: "Unauthorized"
+        }
+    )
     def post(self, request):
         serializer = BudgetSerializer(data=request.data)
         if serializer.is_valid():
@@ -156,6 +291,17 @@ class SetBudgetView(APIView):
 class RetrieveBudgetView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Retrieve the user's monthly budget",
+        responses={
+            200: openapi.Response(
+                description="Budget details",
+                schema=BudgetSerializer
+            ),
+            404: "Budget not set",
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         try:
             budget = Budget.objects.get(user=request.user)
@@ -168,6 +314,19 @@ class RetrieveBudgetView(APIView):
 class UpdateBudgetView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Update the user's monthly budget",
+        request_body=BudgetSerializer,
+        responses={
+            200: openapi.Response(
+                description="Budget updated successfully",
+                schema=BudgetSerializer
+            ),
+            400: "Bad Request",
+            404: "Budget not set",
+            401: "Unauthorized"
+        }
+    )
     def put(self, request):
         try:
             budget = Budget.objects.get(user=request.user)
@@ -182,6 +341,24 @@ class UpdateBudgetView(APIView):
 class BudgetAnalysisView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Get budget analysis including monthly budget, total expenses, and remaining budget",
+        responses={
+            200: openapi.Response(
+                description="Budget analysis",
+                examples={
+                    "application/json": {
+                        "monthly_budget": 5000.00,
+                        "total_expenses": 3000.00,
+                        "remaining_budget": 2000.00,
+                        "status": "Under Budget"
+                    }
+                }
+            ),
+            404: "Budget not set",
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         try:
             budget = Budget.objects.get(user=request.user)
@@ -263,6 +440,31 @@ class WeeklyFinancialOverviewView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    @swagger_auto_schema(
+        operation_description="Get weekly financial overview including income, expenses, and category breakdown",
+        responses={
+            200: openapi.Response(
+                description="Weekly financial overview",
+                examples={
+                    "application/json": {
+                        "start_date": "2024-01-01",
+                        "end_date": "2024-01-07",
+                        "weekly_income": 2000.00,
+                        "weekly_expenses": 1500.00,
+                        "net_balance": 500.00,
+                        "category_breakdown": {
+                            "Food": {
+                                "income": 0,
+                                "expense": 500.00,
+                                "net": -500.00
+                            }
+                        }
+                    }
+                }
+            ),
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         # Use the service function to get weekly financial data
         weekly_overview = get_weekly_financial_overview(request.user)
@@ -277,6 +479,16 @@ class NotificationCenterView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    @swagger_auto_schema(
+        operation_description="Get all notifications for the authenticated user",
+        responses={
+            200: openapi.Response(
+                description="List of notifications",
+                schema=NotificationSerializer(many=True)
+            ),
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
         serializer = NotificationSerializer(notifications, many=True)
@@ -288,6 +500,21 @@ class MarkNotificationReadView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    @swagger_auto_schema(
+        operation_description="Mark a specific notification as read",
+        responses={
+            200: openapi.Response(
+                description="Notification marked as read",
+                examples={
+                    "application/json": {
+                        "status": "success"
+                    }
+                }
+            ),
+            404: "Notification not found",
+            401: "Unauthorized"
+        }
+    )
     def put(self, request, id):
         try:
             notification = Notification.objects.get(id=id, user=request.user)
@@ -303,6 +530,20 @@ class MarkAllNotificationsReadView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    @swagger_auto_schema(
+        operation_description="Mark all notifications as read",
+        responses={
+            200: openapi.Response(
+                description="All notifications marked as read",
+                examples={
+                    "application/json": {
+                        "status": "success"
+                    }
+                }
+            ),
+            401: "Unauthorized"
+        }
+    )
     def put(self, request):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
         return Response({'status': 'success'})
@@ -313,6 +554,20 @@ class UnreadNotificationsCountView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    @swagger_auto_schema(
+        operation_description="Get count of unread notifications",
+        responses={
+            200: openapi.Response(
+                description="Unread notifications count",
+                examples={
+                    "application/json": {
+                        "unread_count": 5
+                    }
+                }
+            ),
+            401: "Unauthorized"
+        }
+    )
     def get(self, request):
         count = Notification.objects.filter(user=request.user, is_read=False).count()
         return Response({'unread_count': count})
