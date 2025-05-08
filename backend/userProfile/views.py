@@ -9,6 +9,8 @@ from .serializers import UserProfileSerializer, UserSerializer
 from .models import UserProfile
 from django.contrib.auth.models import User
 import logging
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,15 @@ class UserProfileView(APIView):
             return [AllowAny()]
         return [IsAuthenticated()]
 
+    @swagger_auto_schema(
+        operation_description="Retrieve the authenticated user's profile information",
+        operation_summary="Get user profile",
+        responses={
+            200: UserProfileSerializer,
+            401: "Authentication credentials were not provided",
+            500: "Internal server error"
+        }
+    )
     def get(self, request):
         """
         Retrieve the user's profile information
@@ -75,6 +86,17 @@ class UserProfileView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @swagger_auto_schema(
+        operation_description="Update the authenticated user's profile information",
+        operation_summary="Update user profile",
+        request_body=UserProfileSerializer,
+        responses={
+            200: UserProfileSerializer,
+            400: "Invalid data provided",
+            401: "Authentication required",
+            500: "Internal server error"
+        }
+    )
     def put(self, request):
         """
         Update the user's profile information
@@ -126,6 +148,26 @@ class AdminUserProfileView(APIView):
     authentication_classes = [SessionAuthentication, BasicAuthentication, TokenAuthentication]
     permission_classes = [IsAuthenticated, IsAdminUser]
     
+    @swagger_auto_schema(
+        operation_description="Retrieve user profile(s) - Admin only",
+        operation_summary="Get user profile(s)",
+        manual_parameters=[
+            openapi.Parameter(
+                'user_id',
+                openapi.IN_PATH,
+                description="User ID to retrieve specific profile",
+                type=openapi.TYPE_INTEGER,
+                required=True
+            )
+        ],
+        responses={
+            200: UserSerializer,
+            401: "Authentication required",
+            403: "Admin access required",
+            404: "User not found",
+            500: "Internal server error"
+        }
+    )
     def get(self, request, user_id=None):
         """
         Retrieve user profile(s)
