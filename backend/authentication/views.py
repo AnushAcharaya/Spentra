@@ -9,12 +9,30 @@ from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 User = get_user_model()
 
 
 class RegisterView(APIView):
+    @swagger_auto_schema(
+        operation_description="Register a new user",
+        operation_summary="User Registration",
+        request_body=RegisterSerializer,
+        responses={
+            201: openapi.Response(
+                description="User registered successfully",
+                examples={
+                    "application/json": {
+                        "message": "User registered successfully. Confirmation email sent."
+                    }
+                }
+            ),
+            400: "Bad Request - Invalid data provided"
+        }
+    )
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -42,6 +60,26 @@ class RegisterView(APIView):
 
 
 class LoginView(APIView):
+    @swagger_auto_schema(
+        operation_description="Login with email and password",
+        operation_summary="User Login",
+        request_body=LoginSerializer,
+        responses={
+            200: openapi.Response(
+                description="Login successful",
+                examples={
+                    "application/json": {
+                        "message": "Login successful.",
+                        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                    }
+                }
+            ),
+            401: "Invalid credentials",
+            404: "User not found",
+            400: "Bad Request - Invalid data provided"
+        }
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -67,6 +105,23 @@ class LoginView(APIView):
 
 
 class RequestPasswordResetView(APIView):
+    @swagger_auto_schema(
+        operation_description="Request password reset by sending OTP to email",
+        operation_summary="Request Password Reset",
+        request_body=RequestPasswordResetSerializer,
+        responses={
+            200: openapi.Response(
+                description="OTP sent successfully",
+                examples={
+                    "application/json": {
+                        "message": "OTP has been sent to your email."
+                    }
+                }
+            ),
+            400: "Bad Request - Invalid data provided",
+            500: "Internal Server Error - Failed to send OTP"
+        }
+    )
     def post(self, request):
         serializer = RequestPasswordResetSerializer(data=request.data)
         if serializer.is_valid():
@@ -84,6 +139,31 @@ class RequestPasswordResetView(APIView):
 
 
 class OTPVerifyView(APIView):
+    @swagger_auto_schema(
+        operation_description="Verify OTP for password reset",
+        operation_summary="Verify OTP",
+        request_body=OTPVerifySerializer,
+        manual_parameters=[
+            openapi.Parameter(
+                'email',
+                openapi.IN_QUERY,
+                description="Email address for OTP verification",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description="OTP verified successfully",
+                examples={
+                    "application/json": {
+                        "message": "OTP verified successfully. You can now reset your password."
+                    }
+                }
+            ),
+            400: "Bad Request - Invalid data or missing email"
+        }
+    )
     def post(self, request):
         # Get email from query parameters or session
         email = request.query_params.get('email') or request.session.get('reset_email')
@@ -106,6 +186,31 @@ class OTPVerifyView(APIView):
 
 
 class PasswordResetView(APIView):
+    @swagger_auto_schema(
+        operation_description="Reset password after OTP verification",
+        operation_summary="Reset Password",
+        request_body=PasswordResetSerializer,
+        manual_parameters=[
+            openapi.Parameter(
+                'email',
+                openapi.IN_QUERY,
+                description="Email address for password reset",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description="Password reset successful",
+                examples={
+                    "application/json": {
+                        "message": "Password has been reset successfully."
+                    }
+                }
+            ),
+            400: "Bad Request - Invalid data or missing email"
+        }
+    )
     def post(self, request):
         # Extract email from query parameters or session
         email = request.query_params.get('email') or request.session.get('reset_email')
@@ -124,5 +229,20 @@ class PasswordResetView(APIView):
 class ProtectedView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Access a protected endpoint that requires authentication",
+        operation_summary="Protected Endpoint",
+        responses={
+            200: openapi.Response(
+                description="Successfully accessed protected endpoint",
+                examples={
+                    "application/json": {
+                        "message": "This is a protected view."
+                    }
+                }
+            ),
+            401: "Authentication credentials were not provided"
+        }
+    )
     def get(self, request):
         return Response({"message": "This is a protected view."})
