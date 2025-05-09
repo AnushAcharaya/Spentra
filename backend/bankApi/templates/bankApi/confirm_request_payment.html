@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Requests</title>
+</head>
+
+<body>
+    <h1>Approved Requests</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Property</th>
+                <th>Amount</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request in approved_requests %}
+            <tr>
+                <td>{{ request.description }}</td>
+                <td>{{ request.total_price }}</td>
+                <td>
+                    <form action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" method="POST">
+                        <input type="hidden" name="amount" value="{{ request.total_price }}">
+                        <input type="hidden" name="tax_amount" value="0">
+                        <input type="hidden" name="total_amount" value="{{ request.total_price }}">
+                        <input type="hidden" name="transaction_uuid" value="{{ request.uuid }}">
+                        <input type="hidden" name="product_code" value="EPAYTEST">
+                        <input type="hidden" name="product_service_charge" value="0">
+                        <input type="hidden" name="product_delivery_charge" value="0">
+                        <input type="hidden" name="success_url" value="{% url 'payment-success' request.id %}">
+                        <input type="hidden" name="failure_url" value="{% url 'payment-fail' %}">
+                        <input type="hidden" name="signed_field_names" value="{{ request.signed_field_names }}">
+                        <input type="hidden" name="signature" value="{{ request.signature }}">
+                        <button type="submit" class="btn btn-success btn-sm">Pay with eSewa</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>
